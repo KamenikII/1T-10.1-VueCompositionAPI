@@ -48,31 +48,78 @@
 
 <script setup> //setup - для однофайловых компонентов
 // imports
-  import { ref } from 'vue'
-  import { v4 as uuidv4 } from 'uuid'
+  import { ref, onMounted } from 'vue'
+  // import { v4 as uuidv4 } from 'uuid'
+  import { db } from '@/firebase'
+  import { collection, onSnapshot, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
+
+// fb refs
+const todosCollectionRef = collection(db, "todos")
 
 // todos
   const todos = ref([])
+  const newToDoContent = ref("")
+
+/*GET todos from db */ onMounted(() => { //для первого случая добавить async
+    // todo вариант без обновлений realtime
+    // const querySnapshot = await getDocs(collection(db, "todos"));
+    // let dbTodos = []
+    // querySnapshot.forEach((doc) => {
+    //   console.log(doc.id, " => ", doc.data());
+    //   const todo = {
+    //     id: doc.id,
+    //     content: doc.data().content,
+    //     done: doc.data().done
+    //   }
+    //   dbTodos.push(todo)
+    // });
+    // todos.value = dbTodos
+
+    // todo вариант с realtime обновлениями
+    onSnapshot(todosCollectionRef, (querySnapshot) => {
+      const dbTodos = [];
+      querySnapshot.forEach((doc) => {
+        const todo = {
+          id: doc.id,
+          content: doc.data().content,
+          done: doc.data().done
+        }
+        dbTodos.push(todo)  
+      });
+      todos.value = dbTodos
+    });
+  })
 
 // methods
-  const addToDo =()=>{
-    const newToDo = {
-      id: uuidv4(),
+  const addToDo = () => {
+    // todo вариант без fb
+    // const newToDo = {
+    //   id: uuidv4(),
+    //   content: newToDoContent.value,
+    //   done: false
+    // }
+    // todos.value.unshift(newToDo)
+
+    // todo вариант с fb
+    addDoc(todosCollectionRef, {
       content: newToDoContent.value,
       done: false
-    }
-    
-    todos.value.unshift(newToDo)
+    });
+
     newToDoContent.value = ""
   }
-  const newToDoContent = ref("")
   const deleteToDo = id => {
-    todos.value = todos.value.filter(todo => todo.id !== id)
+    // todos.value = todos.value.filter(todo => todo.id !== id)
+    deleteDoc(doc(todosCollectionRef, id))
   }
   const togglerDone = id => {
     const index = todos.value.findIndex(todo => todo.id === id)
-    todos.value[index].done = !todos.value[index].done
+    // todos.value[index].done = !todos.value[index].done
+    updateDoc(doc(todosCollectionRef, id), {
+      done: !todos.value[index].done
+    })
   }
+
 </script>
 
 
